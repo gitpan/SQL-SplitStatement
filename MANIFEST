@@ -19,6 +19,7 @@ t/00-load.t
 t/10-simple.t
 t/20-hard.t
 t/30-nested_blocks.t
+t/40-comments.t
 t/80-examples.t
 t/90-synopsis.t
 xt/boilerplate.t

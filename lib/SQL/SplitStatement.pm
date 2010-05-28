@@ -3,7 +3,7 @@ package SQL::SplitStatement;
 use strict;
 use warnings;
 
-our $VERSION = '0.01000';
+our $VERSION = '0.01001';
 $VERSION = eval $VERSION;
 
 use SQL::Tokenizer 'tokenize_sql';
@@ -13,6 +13,7 @@ __PACKAGE__->mk_accessors( qw/
     keep_semicolon
     keep_extra_spaces
     keep_empty_statements
+    keep_comments
 /);
 
 use constant SEMICOLON => ';';
@@ -25,7 +26,9 @@ sub split {
     my $inside_block = 0;
     
     foreach ( tokenize_sql($code) ) {
-        $statement .= $_;
+        $statement .= $_
+            unless /^(?:--|\/\*)/ && ! $self->keep_comments;
+        
         if    ( /^BEGIN$/i ) { $inside_block++ }
         elsif ( /^END$/i   ) { $inside_block-- }
         
@@ -56,25 +59,26 @@ SQL::SplitStatement - Split any SQL code into atomic statements
 
 =head1 VERSION
 
-Version 0.01000
+Version 0.01001
 
 =head1 SYNOPSIS
 
     my $sql_code = <<'SQL';
     CREATE TABLE parent(a, b, c   , d    );
     CREATE TABLE child (x, y, "w;", "z;z");
+    /* C-style comment; */
     CREATE TRIGGER "check;delete;parent;" BEFORE DELETE ON parent WHEN
         EXISTS (SELECT 1 FROM child WHERE old.a = x AND old.b = y)
     BEGIN
-        SELECT RAISE(ABORT, 'constraint failed;');
+        SELECT RAISE(ABORT, 'constraint failed;'); -- Inlined SQL comment
     END;
+    -- Standalone SQL; comment; w/ semicolons;
     INSERT INTO parent (a, b, c, d) VALUES ('pippo;', 'pluto;', NULL, NULL);
     SQL
     
     use SQL::SplitStatement;
     
     my $sql_splitter = SQL::SplitStatement->new;
-    
     my @statements = $sql_splitter->split($sql_code);
     
     # @statements now is:
@@ -98,7 +102,7 @@ into the atomic statements it is composed of.
 The logic used to split the SQL code is more sophisticated than a raw
 C<split> on the C<;> (semicolon) character,
 so that SQL::SplitStatement is able to correctly handle the presence
-of the semicolon inside identifiers, values or C<BEGIN..END> blocks
+of the semicolon inside identifiers, values, comments or C<BEGIN..END> blocks
 (even nested blocks), as exemplified in the synopsis above.
 
 Consider however that this is by no mean a validating parser: it requests
@@ -133,9 +137,8 @@ The following options are recognized:
 
 =item * C<keep_semicolon>
 
-A boolean option which causes, when set to a false value (which is the default),
+A Boolean option which causes, when set to a false value (which is the default),
 the trailing semicolon to be discarded in the returned atomic statements.
-
 When set to a true value, the trailing semicolons are kept instead.
 
 If your statements are to be fed to a DBMS, you are strongly encouraged to
@@ -147,9 +150,8 @@ never has a trailing semicolon. See below for an example.)
 
 =item * C<keep_extra_spaces>
 
-A boolean option which causes, when set to a false value (which is the default),
+A Boolean option which causes, when set to a false value (which is the default),
 the spaces (C<\s>) around the statements to be trimmed.
-
 When set to a true value, these spaces are kept instead.
 
 When C<keep_semicolon> is set to false as well, the semicolon
@@ -159,36 +161,59 @@ This ensures that if C<keep_extra_spaces> is set to false, the returned
 statements will never have trailing (nor leading) spaces, regardless of
 the C<keep_semicolon> value.
 
+=item * C<keep_comments>
+
+A Boolean option which causes, when set to a false value (which is the default),
+the comments to be discarded.
+When set to a true value, the comments are returned instead.
+
+Both SQL and C-style comments are recognized.
+
+When kept, each comment is returned in the same string with the atomic
+statement it belongs to.
+A comment belongs to a statement if it appears, in the original sql code,
+before the end of that statement and after the trailing semicolon
+of the previous statement (if it exists), as shown in this
+meta-SQL snippet:
+
+    /* This comment will be returned with statement1 */
+    <statement1>; -- This will go with statement2
+    
+    <statement2>
+
 =item * C<keep_empty_statements>
 
-A boolean option which causes, when set to a false value (which is the default),
+A Boolean option which causes, when set to a false value (which is the default),
 the empty statements to be discarded.
-
 When set to a true value, the empty statements are returned instead.
 
 A statement is considered empty when it contains no character other than
 the semicolon and space characters (C<\s>).
 
-Note that this option is completely independent to the others, that is,
-an empty statement is recognized as such regardless of the values
-of the above options C<keep_semicolon> and C<keep_extra_spaces>.
+A statement composed solely of comments is not recognized as empty and may
+therefore be returned even when C<keep_empty_statements> is false.
+If you want to avoid this, please leave C<keep_comments> to false as well.
+
+Note instead that an empty statement is recognized as such regardless
+of the value of the options C<keep_semicolon> and C<keep_extra_spaces>.
 
 =back
 
 These options are basically to be kept to their default (false) values,
 especially if the atomic statements are to be given to a DBMS.
 
-They are intented mainly for I<cosmetic> reasons, or if you want to count
+They are intended mainly for I<cosmetic> reasons, or if you want to count
 by how many atomic statements, including the empty ones, your original SQL code
 was composed of.
 
-Another situation where they are useful (necessary, really), is when you want
-to retain the ability to verbatim rebuild the original SQL string from the
-returned statements:
+Another situation where they are useful (in the general case necessary, really),
+is when you want to retain the ability to verbatim rebuild the original SQL
+string from the returned statements:
 
     my $verbatim_splitter = SQL::SplitStatement->new({
         keep_semicolon        => 1,
         keep_extra_spaces     => 1,
+        keep_comments         => 1,
         keep_empty_statements => 1
     });
     
@@ -246,6 +271,18 @@ Getter/setter method for the C<keep_semicolon> option explained above.
 =item * C<< $sql_splitter->keep_extra_spaces( $boolean ) >>
 
 Getter/setter method for the C<keep_extra_spaces> option explained above.
+
+=back
+
+=head2 C<keep_comments>
+
+=over 4
+
+=item * C<< $sql_splitter->keep_comments >>
+
+=item * C<< $sql_splitter->keep_comments( $boolean ) >>
+
+Getter/setter method for the C<keep_comments> option explained above.
 
 =back
 

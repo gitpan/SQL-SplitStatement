@@ -2,24 +2,25 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    Version 0.01000
+    Version 0.01001
 
 SYNOPSIS
         my $sql_code = <<'SQL';
         CREATE TABLE parent(a, b, c   , d    );
         CREATE TABLE child (x, y, "w;", "z;z");
+        /* C-style comment; */
         CREATE TRIGGER "check;delete;parent;" BEFORE DELETE ON parent WHEN
             EXISTS (SELECT 1 FROM child WHERE old.a = x AND old.b = y)
         BEGIN
-            SELECT RAISE(ABORT, 'constraint failed;');
+            SELECT RAISE(ABORT, 'constraint failed;'); -- Inlined SQL comment
         END;
+        -- Standalone SQL; comment; w/ semicolons;
         INSERT INTO parent (a, b, c, d) VALUES ('pippo;', 'pluto;', NULL, NULL);
         SQL
     
         use SQL::SplitStatement;
     
         my $sql_splitter = SQL::SplitStatement->new;
-    
         my @statements = $sql_splitter->split($sql_code);
     
         # @statements now is:
@@ -42,8 +43,8 @@ DESCRIPTION
     The logic used to split the SQL code is more sophisticated than a raw
     "split" on the ";" (semicolon) character, so that SQL::SplitStatement is
     able to correctly handle the presence of the semicolon inside
-    identifiers, values or "BEGIN..END" blocks (even nested blocks), as
-    exemplified in the synopsis above.
+    identifiers, values, comments or "BEGIN..END" blocks (even nested
+    blocks), as exemplified in the synopsis above.
 
     Consider however that this is by no mean a validating parser: it
     requests its input to be syntactically valid SQL, otherwise it can
@@ -70,11 +71,10 @@ METHODS
 
     *   "keep_semicolon"
 
-        A boolean option which causes, when set to a false value (which is
+        A Boolean option which causes, when set to a false value (which is
         the default), the trailing semicolon to be discarded in the returned
-        atomic statements.
-
-        When set to a true value, the trailing semicolons are kept instead.
+        atomic statements. When set to a true value, the trailing semicolons
+        are kept instead.
 
         If your statements are to be fed to a DBMS, you are strongly
         encouraged to keep this option to its default (false) value, since
@@ -86,9 +86,8 @@ METHODS
 
     *   "keep_extra_spaces"
 
-        A boolean option which causes, when set to a false value (which is
+        A Boolean option which causes, when set to a false value (which is
         the default), the spaces ("\s") around the statements to be trimmed.
-
         When set to a true value, these spaces are kept instead.
 
         When "keep_semicolon" is set to false as well, the semicolon is
@@ -98,35 +97,58 @@ METHODS
         never have trailing (nor leading) spaces, regardless of the
         "keep_semicolon" value.
 
+    *   "keep_comments"
+
+        A Boolean option which causes, when set to a false value (which is
+        the default), the comments to be discarded. When set to a true
+        value, the comments are returned instead.
+
+        Both SQL and C-style comments are recognized.
+
+        When kept, each comment is returned in the same string with the
+        atomic statement it belongs to. A comment belongs to a statement if
+        it appears, in the original sql code, before the end of that
+        statement and after the trailing semicolon of the previous statement
+        (if it exists), as shown in this meta-SQL snippet:
+
+            /* This comment will be returned with statement1 */
+            <statement1>; -- This will go with statement2
+    
+            <statement2>
+
     *   "keep_empty_statements"
 
-        A boolean option which causes, when set to a false value (which is
-        the default), the empty statements to be discarded.
-
-        When set to a true value, the empty statements are returned instead.
+        A Boolean option which causes, when set to a false value (which is
+        the default), the empty statements to be discarded. When set to a
+        true value, the empty statements are returned instead.
 
         A statement is considered empty when it contains no character other
         than the semicolon and space characters ("\s").
 
-        Note that this option is completely independent to the others, that
-        is, an empty statement is recognized as such regardless of the
-        values of the above options "keep_semicolon" and
+        A statement composed solely of comments is not recognized as empty
+        and may therefore be returned even when "keep_empty_statements" is
+        false. If you want to avoid this, please leave "keep_comments" to
+        false as well.
+
+        Note instead that an empty statement is recognized as such
+        regardless of the value of the options "keep_semicolon" and
         "keep_extra_spaces".
 
     These options are basically to be kept to their default (false) values,
     especially if the atomic statements are to be given to a DBMS.
 
-    They are intented mainly for *cosmetic* reasons, or if you want to count
+    They are intended mainly for *cosmetic* reasons, or if you want to count
     by how many atomic statements, including the empty ones, your original
     SQL code was composed of.
 
-    Another situation where they are useful (necessary, really), is when you
-    want to retain the ability to verbatim rebuild the original SQL string
-    from the returned statements:
+    Another situation where they are useful (in the general case necessary,
+    really), is when you want to retain the ability to verbatim rebuild the
+    original SQL string from the returned statements:
 
         my $verbatim_splitter = SQL::SplitStatement->new({
             keep_semicolon        => 1,
             keep_extra_spaces     => 1,
+            keep_comments         => 1,
             keep_empty_statements => 1
         });
     
@@ -174,6 +196,13 @@ METHODS
 
         Getter/setter method for the "keep_extra_spaces" option explained
         above.
+
+  "keep_comments"
+    *   "$sql_splitter->keep_comments"
+
+    *   "$sql_splitter->keep_comments( $boolean )"
+
+        Getter/setter method for the "keep_comments" option explained above.
 
   "keep_empty_statements"
     *   "$sql_splitter->keep_empty_statements"

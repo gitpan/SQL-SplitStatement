@@ -22,6 +22,7 @@ no_index:
 requires:
   Class::Accessor::Fast: 0
   SQL::Tokenizer: 0
+  constant: 0
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.01000
+version: 0.01001

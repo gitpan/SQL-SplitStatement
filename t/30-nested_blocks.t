@@ -16,16 +16,16 @@ BEGIN
     statement2;
 END;
 BEGIN
-    BEGIN
+    BegiN
         statement3;
     END;
-    BEGIN
+    bEgIn
         statement3;
         BEGIN
             statement3;
             statement3;
             statement3
-        END;
+        end;
     END;
 END;
 BEGIN statement4 END

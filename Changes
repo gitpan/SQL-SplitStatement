@@ -1,5 +1,17 @@
 Revision history for SQL-SplitStatement
 
+0.01001 2010-05-28 19:00:00 CET
+
+ * Added the ability to discard/keep comments.
+   Really, this is a change in the API, since now comments are discarded
+   by default, while before they were returned instead.
+   I hope that this won't harm any user, given the young age of this module
+   (furthermore there isn't any difference when feeding the returned statements
+   to a DBMS, the differences are just /cosmetic/).
+   Sorry anyway!
+
+ * Added tests for this.
+
 0.01000 2010-05-27 08:00:00 CET
 
  * Initial release.

@@ -13,6 +13,7 @@ readme_from   $main_module;
 author        q{Emanuele Zeppieri <emazep@cpan.org>};
 license       'perl';
 
+requires 'constant';
 requires 'Class::Accessor::Fast';
 requires 'SQL::Tokenizer';
 
