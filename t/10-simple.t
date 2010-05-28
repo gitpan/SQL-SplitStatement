@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use DBI;
 use SQL::SplitStatement;
 
 use Test::More tests => 5;

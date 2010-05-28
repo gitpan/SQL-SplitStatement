@@ -1,5 +1,12 @@
 Revision history for SQL-SplitStatement
 
+0.01002 2010-05-28 20:30:00 CET
+
+ * Removed "use DBI" from some tests, which was left there for error (and caused
+   said tests to fail, where DBI is not installed).
+
+ * Minor POD enhancements.
+
 0.01001 2010-05-28 19:00:00 CET
 
  * Added the ability to discard/keep comments.

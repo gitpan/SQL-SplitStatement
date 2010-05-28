@@ -2,7 +2,7 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    Version 0.01001
+    Version 0.01002
 
 SYNOPSIS
         my $sql_code = <<'SQL';
@@ -57,7 +57,7 @@ DESCRIPTION
 
     If your atomic statements are to be fed to a DBMS, you are encouraged to
     use DBIx::MultiStatementDo instead, which uses this module and also
-    (optionally) offer automatic transactions support, so that you'll have
+    (optionally) offers automatic transactions support, so that you'll have
     the *all-or-nothing* behavior you would probably want.
 
 METHODS
@@ -127,8 +127,7 @@ METHODS
 
         A statement composed solely of comments is not recognized as empty
         and may therefore be returned even when "keep_empty_statements" is
-        false. If you want to avoid this, please leave "keep_comments" to
-        false as well.
+        false. To avoid this, please leave "keep_comments" to false as well.
 
         Note instead that an empty statement is recognized as such
         regardless of the value of the options "keep_semicolon" and

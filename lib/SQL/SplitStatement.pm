@@ -3,7 +3,7 @@ package SQL::SplitStatement;
 use strict;
 use warnings;
 
-our $VERSION = '0.01001';
+our $VERSION = '0.01002';
 $VERSION = eval $VERSION;
 
 use SQL::Tokenizer 'tokenize_sql';
@@ -59,7 +59,7 @@ SQL::SplitStatement - Split any SQL code into atomic statements
 
 =head1 VERSION
 
-Version 0.01001
+Version 0.01002
 
 =head1 SYNOPSIS
 
@@ -115,7 +115,7 @@ split correctly (otherwise it is a bug, that will be corrected once reported).
 
 If your atomic statements are to be fed to a DBMS, you are encouraged to use
 L<DBIx::MultiStatementDo> instead, which uses this module and also (optionally)
-offer automatic transactions support, so that you'll have the I<all-or-nothing>
+offers automatic transactions support, so that you'll have the I<all-or-nothing>
 behavior you would probably want.
 
 =head1 METHODS
@@ -192,7 +192,7 @@ the semicolon and space characters (C<\s>).
 
 A statement composed solely of comments is not recognized as empty and may
 therefore be returned even when C<keep_empty_statements> is false.
-If you want to avoid this, please leave C<keep_comments> to false as well.
+To avoid this, please leave C<keep_comments> to false as well.
 
 Note instead that an empty statement is recognized as such regardless
 of the value of the options C<keep_semicolon> and C<keep_extra_spaces>.
