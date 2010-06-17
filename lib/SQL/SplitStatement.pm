@@ -2,7 +2,7 @@ package SQL::SplitStatement;
 
 use Moose;
 
-our $VERSION = '0.05001';
+our $VERSION = '0.05002';
 $VERSION = eval $VERSION;
 
 use SQL::Tokenizer qw(tokenize_sql);
@@ -28,6 +28,7 @@ my $terminator_re     = qr[;|/|;\s+/];
 my $begin_comment_re  = qr/^(?:--|\/\*)/;
 my $DECLARE_re        = qr/^(DECLARE|PROCEDURE|FUNCTION)$/i;
 my $PACKAGE_re        = qr/^PACKAGE$/i;
+my $BODY_re           = qr/^BODY$/i;
 
 has [ qw(
     keep_terminator
@@ -66,6 +67,8 @@ sub split_with_placeholders {
     my @statements = ();
     my $inside_block = 0;
     my $inside_declare = 0;
+    my $inside_package = 0;
+    my $package_name = '';
     my $statement_placeholders = 0;
     my @placeholders = ();
     
@@ -75,25 +78,30 @@ sub split_with_placeholders {
         $statement .= $token
             unless $self->_is_comment($token) && ! $self->keep_comments;
         
-        if (
-            $self->_is_BEGIN_of_block($token, \@tokens)
-            || $token =~ $PACKAGE_re
-        ) {
+        if ( $self->_is_BEGIN_of_block($token, \@tokens) ) {
             $inside_block++;
             $inside_declare = 0
+        }
+        elsif ( $token =~ $PACKAGE_re ) {
+            $inside_package = 1;
+            $package_name = $self->_get_package_name(\@tokens, $BODY_re)
         }
         elsif ( $token =~ $DECLARE_re ) {
             $inside_declare = 1
         }
-        elsif ( $self->_is_END_of_block($token, \@tokens) ) {
-            $inside_block--
+        elsif ( my $name = $self->_is_END_of_block($token, \@tokens) ) {
+            $inside_block-- if $inside_block;
+            if ($name eq $package_name) {
+                $inside_package = 0;
+                $package_name = ''
+            }
         }
         elsif ( $token eq PLACEHOLDER ) {
             $statement_placeholders++
         }
         
         next if ! $self->_is_terminator($token, \@tokens)
-            || $inside_block || $inside_declare;
+            || $inside_block || $inside_declare || $inside_package;
         
         push @statements, $statement;
         push @placeholders, $statement_placeholders;
@@ -144,10 +152,20 @@ sub _is_BEGIN_of_block {
 sub _is_END_of_block {
     my ($self, $token, $tokens) = @_;
     my $next_token = $self->_get_next_significant_token($tokens);
-    return $token =~ /^END$/i && (
-        ! defined($next_token)
-        || $next_token !~ $procedural_END_re
-    )
+    
+    # Return possible package name
+    return $next_token || 1
+        if $token =~ /^END$/i && (
+            ! defined($next_token)
+            || $next_token !~ $procedural_END_re
+        );
+    
+    return
+}
+
+sub _get_package_name {
+    my ($self, $tokens) = @_;
+    return $self->_get_next_significant_token($tokens, $BODY_re);
 }
 
 sub _is_terminator {
@@ -164,10 +182,14 @@ sub _is_terminator {
 }
 
 sub _get_next_significant_token {
-    my ($self, $tokens) = @_;
-    return firstval {
-        /\S/ && ! $self->_is_comment($_)
-    } @$tokens
+    my ($self, $tokens, $skiptoken_re) = @_;
+    return $skiptoken_re
+        ? firstval {
+            /\S/ && ! $self->_is_comment($_) && ! /$skiptoken_re/
+        } @$tokens
+        : firstval {
+            /\S/ && ! $self->_is_comment($_)
+        } @$tokens
 }
 
 no Moose;
@@ -183,7 +205,7 @@ SQL::SplitStatement - Split any SQL code into atomic statements
 
 =head1 VERSION
 
-Version 0.05001
+Version 0.05002
 
 =head1 SYNOPSIS
 

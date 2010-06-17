@@ -2,7 +2,7 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    Version 0.05001
+    Version 0.05002
 
 SYNOPSIS
         my $sql_code = <<'SQL';

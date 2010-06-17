@@ -1,5 +1,13 @@
 Revision history for SQL-SplitStatement
 
+0.05002 2010-06-17 08:00:00 CET
+
+ * Now handles also the presence of an initialization block inside a
+   "PACKAGE" block (anyone who happen to be a PL/SQL user: my sincere
+   condolences!)
+ 
+ * Tests for that.
+
 0.05001 2010-06-17 06:00:00 CET
 
  * Now handles also the PL/SQL "CREATE ... PACKAGE" construct (thanks to
