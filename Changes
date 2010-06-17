@@ -1,23 +1,51 @@
 Revision history for SQL-SplitStatement
 
+0.05000 2010-06-17 04:00:00 CET
+
+ * Now holds transactions (starting either with "BEGIN" and "START") correclty.
+   Closes bug #58032. Thanks to Frew Schmidt.
+ 
+ * Now holds procedural code as well.
+   Closes bug #57971. Thanks to Dan Horne (thank you Dan also for the info by
+   private mail!)
+ 
+ * Now handle also Oracle-style statement terminators (slash and
+   semicolon-newline-slash-newline).
+ 
+ * Start of deprecation cycle on the "keep_semicolon" option which has been
+   renamed to "keep_terminator" (as now different terminator tokens are
+   recognized).
+   
+ * Many tests and docs additions.
+ 
+ * Switch from Class::Accessor to Moose.
+
+0.03000 2010-05-30 03:00:00 CET # NEVER RELEASED TO CPAN
+ 
+ * "split_with_placeholders" method added.
+ 
+ * Tests and docs for "split_with_placeholders".
+ 
+ * Assorted minor code and docs enhancements.
+
 0.01002 2010-05-28 20:30:00 CET
 
  * Removed "use DBI" from some tests, which was left there for error (and caused
-   said tests to fail, where DBI is not installed).
-
- * Minor POD enhancements.
+   said tests to fail, where DBI was not installed).
+ 
+ * Minor docs enhancements.
 
 0.01001 2010-05-28 19:00:00 CET
 
  * Added the ability to discard/keep comments.
-   Really, this is a change in the API, since now comments are discarded
-   by default, while before they were returned instead.
+   Really, this is a change in the API, since now comments are discarded by
+   default, while before they were returned instead.
    I hope that this won't harm any user, given the young age of this module
    (furthermore there isn't any difference when feeding the returned statements
    to a DBMS, the differences are just /cosmetic/).
    Sorry anyway!
-
- * Added tests for this.
+ 
+ * Added tests and docs for this.
 
 0.01000 2010-05-27 08:00:00 CET
 

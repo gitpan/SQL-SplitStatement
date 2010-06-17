@@ -8,18 +8,22 @@ use SQL::SplitStatement;
 use Test::More tests => 2;
 
 # This is artificial, not valid SQL.
-# The only important thing is that BEGIN..END blocks are not concatened;
 my $sql = <<'SQL';
 statement1;
+DECLARE
 BEGIN
     statement2;
 END;
+CREATE
+-- another comment
 BEGIN
+    CREATE
     BegiN
         statement3;
     END;
+    CREATE
     bEgIn
-        statement3;
+        CREATE -- Inlined random comment
         BEGIN
             statement3;
             statement3;
@@ -27,11 +31,18 @@ BEGIN
         end;
     END;
 END;
-BEGIN statement4 END
+-- a comment;
+
+/* A
+multiline
+comment */
+DECLARE BEGIN statement4 END
 SQL
 chop( my $clean_sql = $sql );
 
-my $sql_splitter = SQL::SplitStatement->new;
+my $sql_splitter = SQL::SplitStatement->new(
+    keep_comments => 1
+);
 
 my @statements = $sql_splitter->split($sql);
 

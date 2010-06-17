@@ -30,7 +30,7 @@ CREATE TABLE foo (
 SQL
 
 my $sql_splitter = SQL::SplitStatement->new({
-    keep_semicolon        => 1,
+    keep_terminator       => 1,
     keep_extra_spaces     => 1,
     keep_empty_statements => 1
 });
@@ -46,7 +46,7 @@ is (
     'SQL code rebuilt w/ semicolon'
 );
 
-$sql_splitter->keep_semicolon(0);
+$sql_splitter->keep_terminator(0);
 @statements = $sql_splitter->split($sql);
 
 is (

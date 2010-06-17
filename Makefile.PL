@@ -14,7 +14,8 @@ author        q{Emanuele Zeppieri <emazep@cpan.org>};
 license       'perl';
 
 requires 'constant';
-requires 'Class::Accessor::Fast';
+requires 'List::MoreUtils';
+requires 'Moose';
 requires 'SQL::Tokenizer';
 
 test_requires 'Test::More';

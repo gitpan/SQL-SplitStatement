@@ -8,13 +8,11 @@ use SQL::SplitStatement;
 use Test::More tests => 3;
 
 my $sql_splitter = SQL::SplitStatement->new({
-    keep_semicolon        => 1,
+    keep_terminator       => 1,
     keep_empty_statements => 1
 });
 
 my @statements = $sql_splitter->split( 'SELECT 1;' );
-
-#diag 'The SQL code contains ' . scalar(@statements) . ' statements.';
 
 cmp_ok (
     scalar(@statements), '==', 2,
@@ -31,7 +29,7 @@ CREATE TABLE foo (
     foo_field_1 VARCHAR,
     foo_field_2 VARCHAR
 );
-
+-- Comment with semicolon;
 CREATE TABLE bar (
     bar_field_1 VARCHAR,
     bar_field_2 VARCHAR
@@ -39,8 +37,9 @@ CREATE TABLE bar (
 SQL
 
 my $verbatim_splitter = SQL::SplitStatement->new({
-    keep_semicolon        => 1,
+    keep_terminator       => 1,
     keep_extra_spaces     => 1,
+    keep_comments         => 1,
     keep_empty_statements => 1
 });
 

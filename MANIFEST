@@ -14,13 +14,21 @@ lib/SQL/SplitStatement.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
+perl.exe.stackdump
 README
 t/00-load.t
 t/10-simple.t
 t/20-hard.t
 t/30-nested_blocks.t
 t/40-comments.t
+t/60-placeholders.t
+t/61-placeholders_empty.t
+t/70-oracle_proc_mixed.t
+t/71-oracle_proc_RTbug_57971.t
+t/75-transactions.t
+t/76-transactions_and_proc.t
 t/80-examples.t
+t/85-examples_procedural.t
 t/90-synopsis.t
 xt/boilerplate.t
 xt/manifest.t
