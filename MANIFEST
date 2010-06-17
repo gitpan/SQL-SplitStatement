@@ -25,6 +25,7 @@ t/60-placeholders.t
 t/61-placeholders_empty.t
 t/70-oracle_proc_mixed.t
 t/71-oracle_proc_RTbug_57971.t
+t/72-oracle_proc_package.t
 t/75-transactions.t
 t/76-transactions_and_proc.t
 t/80-examples.t

@@ -1,11 +1,18 @@
 Revision history for SQL-SplitStatement
 
+0.05001 2010-06-17 06:00:00 CET
+
+ * Now handles also the PL/SQL "CREATE ... PACKAGE" construct (thanks to
+   Dan Horne for his info about that!)
+ 
+ * Tests for that.
+
 0.05000 2010-06-17 04:00:00 CET
 
- * Now holds transactions (starting either with "BEGIN" and "START") correclty.
+ * Now handles transactions (starting either with "BEGIN" and "START") correclty.
    Closes bug #58032. Thanks to Frew Schmidt.
  
- * Now holds procedural code as well.
+ * Now handles procedural code as well.
    Closes bug #57971. Thanks to Dan Horne (thank you Dan also for the info by
    private mail!)
  

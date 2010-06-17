@@ -2,7 +2,7 @@ package SQL::SplitStatement;
 
 use Moose;
 
-our $VERSION = '0.05000';
+our $VERSION = '0.05001';
 $VERSION = eval $VERSION;
 
 use SQL::Tokenizer qw(tokenize_sql);
@@ -27,6 +27,7 @@ my $procedural_END_re = qr/^(?:IF|LOOP)$/i;
 my $terminator_re     = qr[;|/|;\s+/];
 my $begin_comment_re  = qr/^(?:--|\/\*)/;
 my $DECLARE_re        = qr/^(DECLARE|PROCEDURE|FUNCTION)$/i;
+my $PACKAGE_re        = qr/^PACKAGE$/i;
 
 has [ qw(
     keep_terminator
@@ -74,7 +75,10 @@ sub split_with_placeholders {
         $statement .= $token
             unless $self->_is_comment($token) && ! $self->keep_comments;
         
-        if ( $self->_is_BEGIN_of_block($token, \@tokens) ) {
+        if (
+            $self->_is_BEGIN_of_block($token, \@tokens)
+            || $token =~ $PACKAGE_re
+        ) {
             $inside_block++;
             $inside_declare = 0
         }
@@ -179,7 +183,7 @@ SQL::SplitStatement - Split any SQL code into atomic statements
 
 =head1 VERSION
 
-Version 0.05000
+Version 0.05001
 
 =head1 SYNOPSIS
 
