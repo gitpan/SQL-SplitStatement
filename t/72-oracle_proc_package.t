@@ -15,7 +15,7 @@ $sql_code = <<'SQL';
 CREATE TABLE sqr_root_sum (num NUMBER, sq_root NUMBER(6,2),
                            sqr NUMBER, sum_sqrs NUMBER);
 
-CREATE PACKAGE BODY emp_actions AS  -- body
+CREATE PaCkaGe BODY emp_actions AS  -- body
    CURSOR desc_salary RETURN EmpRecTyp IS
       SELECT empno, sal FROM emp ORDER BY sal DESC;
    PROCEDURE hire_employee (

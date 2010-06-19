@@ -2,7 +2,7 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    Version 0.05002
+    Version 0.05003
 
 SYNOPSIS
         my $sql_code = <<'SQL';
@@ -45,17 +45,17 @@ DESCRIPTION
     "split" on the *statement terminator token*, so that SQL::SplitStatement
     is able to correctly handle the presence of said token inside
     identifiers, values, comments, "BEGIN ... END" blocks (even nested) and
-    procedural code, as (partially) exemplified in the synopsis above (see
-    also the "LIMITATIONS" section below).
+    procedural code, as (partially) exemplified in the synopsis above.
 
-    Consider however that this is by no mean a validating parser: it
+    Consider however that this is by no means a validating parser: it
     requests its input to be syntactically valid SQL, otherwise it can
     return unusable statements (that shouldn't be a problem though, as the
     original SQL code would have been unusable anyway).
 
-    If the given SQL code is valid, it is guaranteed however that it will be
-    split correctly (otherwise it is a bug, that will be corrected, once
-    reported).
+    If the given SQL code is *valid*, it is guaranteed however that it will
+    be split correctly (otherwise it is a bug, that will be fixed, once
+    reported). For the exact definition of *valid code*, please see the
+    "LIMITATIONS" section below.
 
     If your atomic statements are to be fed to a DBMS, you are encouraged to
     use DBIx::MultiStatementDo instead, which uses this module and also
@@ -179,7 +179,7 @@ METHODS
 
         my @verbatim_statements = $verbatim_splitter->split($sql_string);
 
-        $sql eq join '', @verbatim_statements; # Always true, given the constructor above.
+        $sql_string eq join '', @verbatim_statements; # Always true, given the constructor above.
 
     Other than this, again, you are highly recommended to stick with the
     defaults.
@@ -216,7 +216,7 @@ METHODS
     (*unnamed*) *placeholders* (aka *parameter markers* - represented by the
     "?" character) contained in the corresponding atomic statements.
 
-    Its return value is a list of two elemnts: the first one is a reference
+    Its return value is a list of two elements: the first one is a reference
     to the list of the atomic statements (exactly as returned by the "split"
     method), and the second is a reference to the list of the numbers of
     placeholders as explained above.
@@ -274,6 +274,15 @@ METHODS
         explained above.
 
 LIMITATIONS
+    To be split correctly, it is not sufficient that the given code is
+    syntactically valid SQL. It is also required that the keywords "BEGIN",
+    "DECLARE", "FUNCTION" and "PROCEDURE" (case-insensitive) are not used as
+    (*bare*) object identifiers (e.g. table names, field names etc.) They
+    can however be used, as long as they are quoted, as shown here:
+
+        CREATE TABLE  declare  (  begin  VARCHAR ); -- Wrong, though accepted by some DBMS.
+        CREATE TABLE "declare" ( "begin" VARCHAR ); -- Correct!
+
     The only procedural code currently recognized is PL/SQL, that is, blocks
     of code which start with a "DECLARE", a "CREATE" or *anonymous* "BEGIN
     ... END" blocks.

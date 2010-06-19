@@ -2,7 +2,7 @@ package SQL::SplitStatement;
 
 use Moose;
 
-our $VERSION = '0.05002';
+our $VERSION = '0.05003';
 $VERSION = eval $VERSION;
 
 use SQL::Tokenizer qw(tokenize_sql);
@@ -26,9 +26,16 @@ my $transaction_re = qr[^(?:
 my $procedural_END_re = qr/^(?:IF|LOOP)$/i;
 my $terminator_re     = qr[;|/|;\s+/];
 my $begin_comment_re  = qr/^(?:--|\/\*)/;
-my $DECLARE_re        = qr/^(DECLARE|PROCEDURE|FUNCTION)$/i;
+my $DECLARE_re        = qr/^(?:DECLARE|PROCEDURE|FUNCTION)$/i;
 my $PACKAGE_re        = qr/^PACKAGE$/i;
-my $BODY_re           = qr/^BODY$/i;
+my $BEGIN_re          = qr/^BEGIN$/i;
+my $END_re            = qr/^END$/i;
+
+my $CREATE_ALTER_re            = qr/^(?:CREATE|ALTER)$/i;
+my $OR_REPLACE_re              = qr/^(?:OR|REPLACE)$/i;
+my $OR_REPLACE_PACKAGE_BODY_re = qr/^(?:OR|REPLACE|PACKAGE|BODY)$/i;
+
+my $BODY_re = qr/^BODY$/i;
 
 has [ qw(
     keep_terminator
@@ -66,6 +73,7 @@ sub split_with_placeholders {
     my $statement = '';
     my @statements = ();
     my $inside_block = 0;
+    my $inside_create_alter = 0;
     my $inside_declare = 0;
     my $inside_package = 0;
     my $package_name = '';
@@ -82,9 +90,17 @@ sub split_with_placeholders {
             $inside_block++;
             $inside_declare = 0
         }
-        elsif ( $token =~ $PACKAGE_re ) {
-            $inside_package = 1;
-            $package_name = $self->_get_package_name(\@tokens, $BODY_re)
+        elsif ( $token =~ $CREATE_ALTER_re ) {
+            $inside_create_alter = 1;
+            
+            my $next_token
+                = $self->_get_next_significant_token(\@tokens, $OR_REPLACE_re);
+            
+            if ( $next_token =~ $PACKAGE_re ) {
+                $inside_package = 1;
+                $package_name = $self->_get_package_name(\@tokens)
+            }
+        
         }
         elsif ( $token =~ $DECLARE_re ) {
             $inside_declare = 1
@@ -98,6 +114,9 @@ sub split_with_placeholders {
         }
         elsif ( $token eq PLACEHOLDER ) {
             $statement_placeholders++
+        }
+        elsif ( $self->_is_terminator($token, \@tokens) ) {
+            $inside_create_alter = 0
         }
         
         next if ! $self->_is_terminator($token, \@tokens)
@@ -145,7 +164,7 @@ sub _is_comment {
 sub _is_BEGIN_of_block {
     my ($self, $token, $tokens) = @_;
     return 
-        $token =~ /^BEGIN$/i
+        $token =~ $BEGIN_re
         && $self->_get_next_significant_token($tokens) !~ $transaction_re
 }
 
@@ -155,7 +174,7 @@ sub _is_END_of_block {
     
     # Return possible package name
     return $next_token || 1
-        if $token =~ /^END$/i && (
+        if $token =~ $END_re && (
             ! defined($next_token)
             || $next_token !~ $procedural_END_re
         );
@@ -165,7 +184,9 @@ sub _is_END_of_block {
 
 sub _get_package_name {
     my ($self, $tokens) = @_;
-    return $self->_get_next_significant_token($tokens, $BODY_re);
+    return $self->_get_next_significant_token(
+        $tokens, $OR_REPLACE_PACKAGE_BODY_re
+    )
 }
 
 sub _is_terminator {
@@ -205,7 +226,7 @@ SQL::SplitStatement - Split any SQL code into atomic statements
 
 =head1 VERSION
 
-Version 0.05002
+Version 0.05003
 
 =head1 SYNOPSIS
 
@@ -249,16 +270,17 @@ The logic used to split the SQL code is more sophisticated than a raw C<split>
 on the I<statement terminator token>, so that SQL::SplitStatement is able to
 correctly handle the presence of said token inside identifiers, values,
 comments, C<BEGIN ... END> blocks (even nested) and procedural code, as
-(partially) exemplified in the synopsis above (see also
-the L</LIMITATIONS> section below).
+(partially) exemplified in the synopsis above.
 
-Consider however that this is by no mean a validating parser: it requests its
+Consider however that this is by no means a validating parser: it requests its
 input to be syntactically valid SQL, otherwise it can return unusable statements
 (that shouldn't be a problem though, as the original SQL code would have been
 unusable anyway).
 
-If the given SQL code is valid, it is guaranteed however that it will be split
-correctly (otherwise it is a bug, that will be corrected, once reported).
+If the given SQL code is I<valid>, it is guaranteed however that it will be
+split correctly (otherwise it is a bug, that will be fixed, once reported).
+For the exact definition of I<valid code>, please see the L</LIMITATIONS>
+section below.
 
 If your atomic statements are to be fed to a DBMS, you are encouraged to use
 L<DBIx::MultiStatementDo> instead, which uses this module and also (optionally)
@@ -389,7 +411,7 @@ string from the returned statements:
 
     my @verbatim_statements = $verbatim_splitter->split($sql_string);
 
-    $sql eq join '', @verbatim_statements; # Always true, given the constructor above.
+    $sql_string eq join '', @verbatim_statements; # Always true, given the constructor above.
 
 Other than this, again, you are highly recommended to stick with the defaults.
 
@@ -435,7 +457,7 @@ also a list of integers, each of which is the number of the (I<unnamed>)
 I<placeholders> (aka I<parameter markers> - represented by the C<?> character)
 contained in the corresponding atomic statements.
 
-Its return value is a list of two elemnts: the first one is a reference to the
+Its return value is a list of two elements: the first one is a reference to the
 list of the atomic statements (exactly as returned by the C<split> method), and
 the second is a reference to the list of the numbers of placeholders as
 explained above.
@@ -509,6 +531,15 @@ Getter/setter method for the C<keep_empty_statements> option explained above.
 =back
 
 =head1 LIMITATIONS
+
+To be split correctly, it is not sufficient that the given code is syntactically
+valid SQL. It is also required that the keywords
+C<BEGIN>, C<DECLARE>, C<FUNCTION> and C<PROCEDURE> (case-insensitive) are not
+used as (I<bare>) object identifiers (e.g. table names, field names etc.)
+They can however be used, as long as they are quoted, as shown here:
+
+    CREATE TABLE  declare  (  begin  VARCHAR ); -- Wrong, though accepted by some DBMS.
+    CREATE TABLE "declare" ( "begin" VARCHAR ); -- Correct!
 
 The only procedural code currently recognized is PL/SQL, that is, blocks of
 code which start with a C<DECLARE>, a C<CREATE> or I<anonymous>

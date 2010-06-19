@@ -1,8 +1,21 @@
 Revision history for SQL-SplitStatement
 
+0.05003 2010-06-20 00:00:00 CET
+
+ * A bit more robust "CREATE ... PACKAGE" handling, so that it is now
+   accepted the use of the "PACKAGE" keyword as an identifier (even unquoted).
+ 
+ * Tests for that.
+ 
+ * Better explained LIMITATIONS.
+ 
+ * Minor doc fixes.
+ 
+ * Cleaned MANIFEST up from perl stackdump.
+
 0.05002 2010-06-17 08:00:00 CET
 
- * Now handles also the presence of an initialization block inside a
+ * Now handles also the presence of a so-called "initialization block" inside a
    "PACKAGE" block (anyone who happen to be a PL/SQL user: my sincere
    condolences!)
  
@@ -17,7 +30,8 @@ Revision history for SQL-SplitStatement
 
 0.05000 2010-06-17 04:00:00 CET
 
- * Now handles transactions (starting either with "BEGIN" and "START") correclty.
+ * Now handles transactions (starting either with "BEGIN" and "START")
+   correclty.
    Closes bug #58032. Thanks to Frew Schmidt.
  
  * Now handles procedural code as well.
