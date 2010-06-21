@@ -2,7 +2,7 @@ package SQL::SplitStatement;
 
 use Moose;
 
-our $VERSION = '0.05003';
+our $VERSION = '0.05003_1';
 $VERSION = eval $VERSION;
 
 use SQL::Tokenizer qw(tokenize_sql);
@@ -79,6 +79,7 @@ sub split_with_placeholders {
     my $package_name = '';
     my $statement_placeholders = 0;
     my @placeholders = ();
+    my $prev_token = '';
     
     my @tokens = tokenize_sql($code);
     
@@ -92,41 +93,55 @@ sub split_with_placeholders {
         }
         elsif ( $token =~ $CREATE_ALTER_re ) {
             $inside_create_alter = 1;
-            
             my $next_token
                 = $self->_get_next_significant_token(\@tokens, $OR_REPLACE_re);
-            
             if ( $next_token =~ $PACKAGE_re ) {
                 $inside_package = 1;
                 $package_name = $self->_get_package_name(\@tokens)
             }
-        
         }
         elsif ( $token =~ $DECLARE_re ) {
             $inside_declare = 1
         }
         elsif ( my $name = $self->_is_END_of_block($token, \@tokens) ) {
-            $inside_block-- if $inside_block;
-            if ($name eq $package_name) {
+            # The END of a PACKAGE block may or may not be followed
+            # by the package name: we need to detect both these cases.
+            if (
+                $inside_package
+                && ($name eq $package_name || !$inside_block)
+            ) {
                 $inside_package = 0;
                 $package_name = ''
             }
+            # This goes *AFTER* the above IS_END_OF_PACKAGE check!
+            $inside_block-- if $inside_block
         }
         elsif ( $token eq PLACEHOLDER ) {
             $statement_placeholders++
         }
-        elsif ( $self->_is_terminator($token, \@tokens) ) {
-            $inside_create_alter = 0
-        }
         
-        next if ! $self->_is_terminator($token, \@tokens)
-            || $inside_block || $inside_declare || $inside_package;
+        my $terminator = $self->_is_terminator($token, \@tokens, $prev_token);
+        
+        next if
+            ! $terminator
+            || $terminator == 1
+                && ( $inside_block || $inside_declare || $inside_package );
+        
+        # Whenever we get this far, we have a new statement.
+        $inside_block        = 0;
+        $inside_declare      = 0;
+        $inside_package      = 0;
+        $inside_create_alter = 0;
         
         push @statements, $statement;
         push @placeholders, $statement_placeholders;
         $statement = '';
         $statement_placeholders = 0;
+
+    } continue {
+        $prev_token = $token if $token =~ /\S/ && ! $self->_is_comment($token)
     }
+    
     push @statements, $statement;
     push @placeholders, $statement_placeholders;
     
@@ -189,11 +204,19 @@ sub _get_package_name {
     )
 }
 
+# Return values:
+#   0: not a terminator
+#   1: terminator
+#   2: hard terminator (semicolon + forward-slash)
 sub _is_terminator {
-    my ($self, $token, $tokens) = @_;
+    my ($self, $token, $tokens, $prev_token) = @_;
     
-    return   if $token ne FORWARD_SLASH && $token ne SEMICOLON;
-    return 1 if $token eq FORWARD_SLASH;
+    return if $token ne FORWARD_SLASH && $token ne SEMICOLON;
+    
+    if ( $token eq FORWARD_SLASH ) {
+        return 2 if $prev_token eq SEMICOLON;
+        return 1
+    };
     
     # $token eq SEMICOLON
     my $next_token = $self->_get_next_significant_token($tokens);
@@ -226,7 +249,7 @@ SQL::SplitStatement - Split any SQL code into atomic statements
 
 =head1 VERSION
 
-Version 0.05003
+Version 0.05003_1
 
 =head1 SYNOPSIS
 
@@ -532,14 +555,60 @@ Getter/setter method for the C<keep_empty_statements> option explained above.
 
 =head1 LIMITATIONS
 
-To be split correctly, it is not sufficient that the given code is syntactically
-valid SQL. It is also required that the keywords
-C<BEGIN>, C<DECLARE>, C<FUNCTION> and C<PROCEDURE> (case-insensitive) are not
-used as (I<bare>) object identifiers (e.g. table names, field names etc.)
+To be split correctly, the given SQL code is subject to the following
+limitations.
+
+=over 4
+
+=item Identifiers
+
+The keywords
+C<BEGIN>, C<DECLARE>, C<FUNCTION> and C<PROCEDURE>
+(case-insensitive) cannot be used as (I<bare>) object identifiers
+(e.g. table names, field names etc.)
+
 They can however be used, as long as they are quoted, as shown here:
 
     CREATE TABLE  declare  (  begin  VARCHAR ); -- Wrong, though accepted by some DBMS.
     CREATE TABLE "declare" ( "begin" VARCHAR ); -- Correct!
+
+=item PL/SQL
+
+If a I<package> contains also an I<initialization block>, then it must have
+the package name after the C<END> or it must terminate with a semicolon and
+a slash.
+
+For example, these two package declarations would be correctly split:
+
+    -- OK since it has the trailing slash
+    CREATE OR REPLACE PACKAGE BODY my_package_1 AS
+        ...
+    BEGIN
+        ...
+    END;
+    /
+    
+    -- OK since it has the package name after the END
+    CREATE OR REPLACE PACKAGE BODY my_package_2 AS
+        ...
+    BEGIN
+        ...
+    END my_package_2;
+
+while this one wouldn't, since it contains an initialization block and it lacks
+both the package name after the C<END> and the trailing slash:
+
+    CREATE OR REPLACE PACKAGE BODY my_package AS
+        ...
+    BEGIN
+        ...
+    END;
+
+Note that if the initialization block is absent, the package block will be
+correctly recognized even if it lacks both the package name after the C<END>
+and the trailing slash.
+
+=item Procedural extensions
 
 The only procedural code currently recognized is PL/SQL, that is, blocks of
 code which start with a C<DECLARE>, a C<CREATE> or I<anonymous>
@@ -547,6 +616,8 @@ C<BEGIN ... END> blocks.
 
 If you need also other procedural languages to be recognized, please let me know
 (possibly attaching test cases).
+
+=back
 
 =head1 DEPENDENCIES
 

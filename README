@@ -2,7 +2,7 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    Version 0.05003
+    Version 0.05003_1
 
 SYNOPSIS
         my $sql_code = <<'SQL';
@@ -274,21 +274,63 @@ METHODS
         explained above.
 
 LIMITATIONS
-    To be split correctly, it is not sufficient that the given code is
-    syntactically valid SQL. It is also required that the keywords "BEGIN",
-    "DECLARE", "FUNCTION" and "PROCEDURE" (case-insensitive) are not used as
-    (*bare*) object identifiers (e.g. table names, field names etc.) They
-    can however be used, as long as they are quoted, as shown here:
+    To be split correctly, the given SQL code is subject to the following
+    limitations.
 
-        CREATE TABLE  declare  (  begin  VARCHAR ); -- Wrong, though accepted by some DBMS.
-        CREATE TABLE "declare" ( "begin" VARCHAR ); -- Correct!
+    Identifiers
+        The keywords "BEGIN", "DECLARE", "FUNCTION" and "PROCEDURE"
+        (case-insensitive) cannot be used as (*bare*) object identifiers
+        (e.g. table names, field names etc.)
 
-    The only procedural code currently recognized is PL/SQL, that is, blocks
-    of code which start with a "DECLARE", a "CREATE" or *anonymous* "BEGIN
-    ... END" blocks.
+        They can however be used, as long as they are quoted, as shown here:
 
-    If you need also other procedural languages to be recognized, please let
-    me know (possibly attaching test cases).
+            CREATE TABLE  declare  (  begin  VARCHAR ); -- Wrong, though accepted by some DBMS.
+            CREATE TABLE "declare" ( "begin" VARCHAR ); -- Correct!
+
+    PL/SQL
+        If a *package* contains also an *initialization block*, then it must
+        have the package name after the "END" or it must terminate with a
+        semicolon and a slash.
+
+        For example, these two package declarations would be correctly
+        split:
+
+            -- OK since it has the trailing slash
+            CREATE OR REPLACE PACKAGE BODY my_package_1 AS
+                ...
+            BEGIN
+                ...
+            END;
+            /
+    
+            -- OK since it has the package name after the END
+            CREATE OR REPLACE PACKAGE BODY my_package_2 AS
+                ...
+            BEGIN
+                ...
+            END my_package_2;
+
+        while this one wouldn't, since it contains an initialization block
+        and it lacks both the package name after the "END" and the trailing
+        slash:
+
+            CREATE OR REPLACE PACKAGE BODY my_package AS
+                ...
+            BEGIN
+                ...
+            END;
+
+        Note that if the initialization block is absent, the package block
+        will be correctly recognized even if it lacks both the package name
+        after the "END" and the trailing slash.
+
+    Procedural extensions
+        The only procedural code currently recognized is PL/SQL, that is,
+        blocks of code which start with a "DECLARE", a "CREATE" or
+        *anonymous* "BEGIN ... END" blocks.
+
+        If you need also other procedural languages to be recognized, please
+        let me know (possibly attaching test cases).
 
 DEPENDENCIES
     SQL::SplitStatement depends on the following modules:

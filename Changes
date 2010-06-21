@@ -1,5 +1,16 @@
 Revision history for SQL-SplitStatement
 
+0.05003_1 2010-06-21 08:30:00 CET
+
+ * Fixed a bug which caused a PL/SQL package without the package name after
+   the END to not be split correctly. Kindly reported by Dan Horne: thanks!
+ 
+ * Tests for this.
+ 
+ * Updated the LIMITATIONS section in the docs to explain that we cannot handle
+   a PL/SQL PACKAGE block _with_ an initialization block inside, if the
+   package lacks _both_ its name after the END and the trailing slash.
+ 
 0.05003 2010-06-20 00:00:00 CET
 
  * A bit more robust "CREATE ... PACKAGE" handling, so that it is now
