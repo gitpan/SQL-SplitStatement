@@ -1,4 +1,4 @@
-#!perl
+#!/usr/bin/env perl
 
 use Test::More tests => 1;
 
@@ -8,5 +8,5 @@ BEGIN {
 }
 
 diag(
-"Testing SQL::SplitStatement $SQL::SplitStatement::VERSION, Perl $], $^X"
+    "Testing SQL::SplitStatement $SQL::SplitStatement::VERSION, Perl $], $^X"
 );

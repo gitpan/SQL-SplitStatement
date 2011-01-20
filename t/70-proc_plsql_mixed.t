@@ -1,18 +1,15 @@
-#!perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use SQL::SplitStatement;
 
-use Test::More tests => 2;
+use Test::More tests => 4;
 
 my $sql_code = <<'SQL';
-BEGIN;
-UPDATE accounts SET balance = balance - 100.00
-    WHERE name = 'Alice';
-SAVEPOINT my_savepoint;
-
+CREATE TABLE sqr_root_sum (num NUMBER, sq_root NUMBER(6,2),
+                           sqr NUMBER, sum_sqrs NUMBER);
 DECLARE
    s PLS_INTEGER;
 BEGIN
@@ -23,16 +20,26 @@ BEGIN
 END;
 /
 
-UPDATE accounts SET balance = balance + 100.00
-    WHERE name = 'Bob';
--- oops ... forget that and use Wally's account
-ROLLBACK TO my_savepoint;
+CREATE TABLE temp (tempid NUMBER(6), tempsal NUMBER(8,2), tempname VARCHAR2(25));
 
+DECLARE
+  total   NUMBER(9) := 0;
+  counter NUMBER(6) := 0;
+BEGIN
+  LOOP
+    counter := counter + 1;
+    total := total + counter * counter;
+    -- exit loop when condition is true
+    EXIT WHEN total > 25000;  
+  END LOOP;
+  DBMS_OUTPUT.PUT_LINE('Counter: ' || TO_CHAR(counter) || ' Total: ' || TO_CHAR(total));
+END;
+/
 -- including OR REPLACE is more convenient when updating a subprogram
-CREATE OR REPLACE PROCEDURE award_bonus (emp_id NUMBER, bonus NUMBER) AS
+CREATE OR REPLACE procEDURE award_bonus (emp_id NUMBER, bonus NUMBER) AS
    commission        REAL;
    comm_missing EXCEPTION;
-BEGIN  -- executable part starts here
+begIN  -- executable part starts here
    SELECT commission_pct / 100 INTO commission FROM employees
     WHERE employee_id = emp_id;
    IF commission IS NULL THEN
@@ -51,30 +58,49 @@ END award_bonus;
 /
 CALL award_bonus(150, 400);
 
-
-UPDATE accounts SET balance = balance + 100.00
-    WHERE name = 'Wally';
-COMMIT;
 SQL
 
 my $splitter;
 my @statements;
 
 $splitter = SQL::SplitStatement->new;
+
 @statements = $splitter->split( $sql_code );
 
 cmp_ok(
-    @statements, '==', 10,
+    @statements, '==', 6,
     'Statements correctly split'
 );
 
-$splitter = SQL::SplitStatement->new({
+$splitter->keep_extra_spaces(1);
+$splitter->keep_empty_statements(1);
+$splitter->keep_terminator(1);
+$splitter->keep_comments(1);
+
+@statements = $splitter->split( $sql_code );
+
+is(
+    join( '', @statements ), $sql_code,
+    'SQL code correctly rebuilt'
+);
+
+# Let's try again, with a different constructor
+
+$splitter = SQL::SplitStatement->new(
     keep_extra_spaces     => 1,
     keep_empty_statements => 1,
     keep_terminator       => 1,
     keep_comments         => 1
-});
+);
+
+$sql_code .= ';ALTER TABLE temp';
+
 @statements = $splitter->split( $sql_code );
+
+cmp_ok(
+    @statements, '==', 8,
+    'Statements correctly split'
+);
 
 is(
     join( '', @statements ), $sql_code,

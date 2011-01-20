@@ -1,11 +1,11 @@
-#!perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use SQL::SplitStatement;
 
-use Test::More tests => 5;
+use Test::More tests => 4;
 
 my $sql_code;
 my $splitter;
@@ -68,14 +68,6 @@ COMMIT;
 
 DROP TABLE accounts;
 SQL
-
-$splitter = SQL::SplitStatement->new;
-@statements = $splitter->split( $sql_code );
-
-cmp_ok(
-    @statements, '==', 14,
-    'Statements correctly split'
-);
 
 $splitter = SQL::SplitStatement->new;
 @statements = $splitter->split( $sql_code );

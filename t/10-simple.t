@@ -1,4 +1,4 @@
-#!perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -34,7 +34,10 @@ my $sql_splitter = SQL::SplitStatement->new({
     keep_extra_spaces     => 1,
     keep_empty_statements => 1
 });
-my @statements = $sql_splitter->split($sql);
+
+my @statements;
+
+@statements = $sql_splitter->split($sql);
 
 cmp_ok (
     scalar(@statements), '==', 3,

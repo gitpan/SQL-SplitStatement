@@ -1,4 +1,4 @@
-#!perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -19,24 +19,24 @@ CREATE
 BEGIN
     CREATE
     BegiN
-        statement3;
+        statement3    ;
     END;
     CREATE
     bEgIn
         CREATE -- Inlined random comment
         BEGIN
-            statement3;
-            statement3;
-            statement3
+            statement4    ;
+            statement5;
+            statement6
         end;
-    END;
-END;
+    END    ;
+EnD;
 -- a comment;
 
 /* A
 multiline
 comment */
-DECLARE BEGIN statement4 END
+DECLARE BEGIN statement7 END
 SQL
 chop( my $clean_sql = $sql );
 
