@@ -2,7 +2,7 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    Version 0.10000
+    version 0.20000
 
 SYNOPSIS
         # Multiple SQL statements in a single string
@@ -39,21 +39,21 @@ SYNOPSIS
 
 DESCRIPTION
     This is a simple module which tries to split any SQL code, even
-    including non-standard extensions (for the details, see the "SUPPORTED
+    including non-standard extensions (for the details see the "SUPPORTED
     DBMSs" section below), into the atomic statements it is composed of.
 
     The logic used to split the SQL code is more sophisticated than a raw
-    "split" on the *statement terminator token*, so that SQL::SplitStatement
-    is able to correctly handle the presence of said token inside
-    identifiers, values, comments, "BEGIN ... END" blocks (even nested),
-    *dollar-quoted* strings, MySQL custom "DELIMITER"s etc., as (partially)
-    exemplified in the synopsis above. Furthermore, it is able to handle
-    procedural code.
+    "split" on the ";" (semicolon) character: first, various different
+    statement terminator *tokens* are recognized (see below for the list),
+    then this module is able to correctly handle the presence of said tokens
+    inside identifiers, values, comments, "BEGIN ... END" blocks (even
+    nested), *dollar-quoted* strings, MySQL custom "DELIMITER"s, procedural
+    code etc., as (partially) exemplified in the synopsis above.
 
     Consider however that this is by no means a validating parser
     (technically speaking, it's just a *context-sensitive tokenizer*). It
     should rather be seen as an in-progress *heuristic* approach, which will
-    gradually improve as bugs will be reported. This also mean that, with
+    gradually improve as bugs will be reported. This also means that, with
     the exception of the "LIMITATIONS" detailed below, there are no known
     (to the author) SQL constructs the most current release of this module
     can't handle.
@@ -86,8 +86,8 @@ METHODS
         don't want the terminator to be present at the end of the (single)
         statement.
 
-        The strings currently recognized (depending on the *context*) as
-        terminators are:
+        The strings currently recognized as terminators (depending on the
+        *context*) are:
 
         *   ";" (the *semicolon* character).
 
@@ -134,7 +134,7 @@ METHODS
         atomic statement it belongs to. A comment belongs to a statement if
         it appears, in the original SQL code, before the end of that
         statement and after the terminator of the previous statement (if it
-        exists), as shown in this meta-SQL snippet:
+        exists), as shown in this pseudo-SQL snippet:
 
             /* This comment
             will be returned
@@ -223,7 +223,7 @@ METHODS
     More precisely, its return value is a list of two elements, the first of
     which is a reference to the list of the atomic statements exactly as
     returned by the "split" method, while the second is a reference to the
-    list of the numbers of placeholders as explained above.
+    list of the number of placeholders as explained above.
 
     Currently the only recognized placeholders are the "?" (question mark)
     characters.
@@ -293,26 +293,17 @@ SUPPORTED DBMSs
 
 LIMITATIONS
     To be split correctly, the given SQL code is subject to the following
-    limitations.
-
-    *   Identifiers
-
-        The keywords "BEGIN", "DECLARE", "FUNCTION" and "PROCEDURE"
-        (case-insensitive) cannot be used as (*bare*) object identifiers
-        (e.g. table names, field names etc.)
-
-        They can however be used, as long as they are quoted, as shown here:
-
-            CREATE TABLE  declare  (  begin  VARCHAR ); -- Wrong, though accepted by some DBMSs.
-            CREATE TABLE "declare" ( "begin" VARCHAR ); -- Correct!
+    limitations, mainly concerning procedural code (the limitation about the
+    use of some keywords as unquoted identifiers affecting the previous
+    releases, has now been eliminated).
 
     *   Procedural extensions
 
         Currently any block of code which start with "DECLARE", "CREATE" or
-        *CALL* is correctly recognized, as well as *bare* "BEGIN ... END"
+        "CALL" is correctly recognized, as well as *bare* "BEGIN ... END"
         blocks and *dollar quoted* blocks, therefore a wide range of
         procedural extensions should be handled correctly. However, only
-        PL/SQL and PL/PgSQL code has been tested so far.
+        PL/SQL, PL/PgSQL and MySQL code has been tested so far.
 
         If you need also other procedural languages to be recognized, please
         let me know (possibly with some test cases).
@@ -379,6 +370,8 @@ AUTHOR
     Emanuele Zeppieri, "<emazep@cpan.org>"
 
 BUGS
+    No known bugs.
+
     Please report any bugs or feature requests to "bug-sql-SplitStatement at
     rt.cpan.org", or through the web interface at
     <http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SQL-SplitStatement>. I

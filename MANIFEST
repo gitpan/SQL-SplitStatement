@@ -12,6 +12,7 @@ t/00-compile.t
 t/00-load.t
 t/10-simple.t
 t/20-hard.t
+t/25-keywords_as_unquoted_identifiers.t
 t/30-nested_blocks.t
 t/40-comments.t
 t/50-transactions.t
