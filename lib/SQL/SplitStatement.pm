@@ -1,7 +1,7 @@
 ## no critic
 package SQL::SplitStatement;
 BEGIN {
-  $SQL::SplitStatement::VERSION = '0.20000';
+  $SQL::SplitStatement::VERSION = '0.30000';
 }
 ## use critic
 
@@ -56,7 +56,7 @@ my $OR_REPLACE_PACKAGE_BODY_re = qr/^(?:OR|REPLACE|PACKAGE|BODY)$/i;
 my $pre_identifier_re = qr/TABLE|[.,(]/i;
 
 SQL::SplitStatement->mk_accessors( qw/
-    keep_terminator
+    keep_terminators
     keep_extra_spaces
     keep_empty_statements
     keep_comments
@@ -67,16 +67,18 @@ SQL::SplitStatement->mk_accessors( qw/
     _tokens_in_custom_delimiter
 /);
 
-# keep_terminator alias
-sub keep_terminators { shift->keep_terminator(@_) }
+# keep_terminators alias
+sub keep_terminator { shift->keep_terminators(@_) }
 
 sub new {
     my $class = shift;
     my $parameters = @_ > 1 ? { @_ } : $_[0] || {};
     if ( exists $parameters->{keep_terminators} ) {
         croak( q[keep_terminator and keep_terminators can't be both assigned'] )
-            if exists $parameters->{keep_terminator};
-        $parameters->{keep_terminator} = delete $parameters->{keep_terminators}
+            if exists $parameters->{keep_terminator}
+    }
+    elsif ( exists $parameters->{keep_terminator} ) {
+        $parameters->{keep_terminators} = delete $parameters->{keep_terminator}
     }
     $class->SUPER::new( $parameters )
 }
@@ -107,7 +109,7 @@ sub split_with_placeholders {
     $code = "\n" if ! defined $code;
     $self->_tokens( [ tokenize_sql($code) ] );
     $self->_terminators( [] ); # Needed (only) to remove them afterwards
-                               # when keep_terminator is false.
+                               # when keep_terminators is false.
     
     $self->_current_statement('');
     
@@ -154,6 +156,7 @@ sub split_with_placeholders {
             # In MySQL a declare can only appear inside a BEGIN ... END block.
             $inside_declare = 1
                 if !$inside_block
+                && !$inside_package
                 && $prev_token !~ $DROP_re
                 && $prev_token !~ $pre_identifier_re
         }
@@ -258,7 +261,7 @@ sub split_with_placeholders {
         }
     }
     
-    unless ( $self->keep_terminator ) {
+    unless ( $self->keep_terminators ) {
         for ( my $i = 0; $i < @filtered_statements; $i++ ) {
             my $terminator = $filtered_terminators[$i];
             if ( $terminator->[0] && $terminator->[0] == CUSTOM_DELIMITER ) {
@@ -389,12 +392,12 @@ sub _is_terminator {
         return SEMICOLON_TERMINATOR
     }
     
-    # $token eq SEMICOLON
+    # $token eq SEMICOLON.
     my $next_token = $self->_peek_at_next_significant_token;
     return SEMICOLON_TERMINATOR
         if ! defined($next_token) || $next_token ne FORWARD_SLASH;
     
-    # $next_token eq FORWARD_SLASH
+    # $next_token eq FORWARD_SLASH: let's wait for it to terminate.
     return
 }
 
@@ -421,7 +424,7 @@ SQL::SplitStatement - Split any SQL code into atomic statements
 
 =head1 VERSION
 
-version 0.20000
+version 0.30000
 
 =head1 SYNOPSIS
 
@@ -469,7 +472,7 @@ I<tokens> are recognized (see below for the list), then this module is able to
 correctly handle the presence of said tokens inside identifiers, values,
 comments, C<BEGIN ... END> blocks (even nested), I<dollar-quoted> strings, MySQL
 custom C<DELIMITER>s, procedural code etc., as (partially) exemplified in the
-synopsis above.
+L</SYNOPSIS> above.
 
 Consider however that this is by no means a validating parser (technically
 speaking, it's just a I<context-sensitive tokenizer>). It should rather be seen
@@ -689,17 +692,17 @@ fourth 3.
 
 =over 4
 
-=item * C<< $sql_splitter->keep_terminator >>
+=item * C<< $sql_splitter->keep_terminators >>
 
-=item * C<< $sql_splitter->keep_terminator( $boolean ) >>
+=item * C<< $sql_splitter->keep_terminators( $boolean ) >>
 
-Getter/setter method for the C<keep_terminator> option explained above.
+Getter/setter method for the C<keep_terminators> option explained above.
 
 =back
 
 =head2 C<keep_terminator>
 
-An alias for the =head2 C<keep_terminators> method explained above.
+An alias for the C<keep_terminators> method explained above.
 
 =head2 C<keep_extra_spaces>
 
@@ -767,14 +770,14 @@ If you need also other procedural languages to be recognized, please let me know
 
 =item * PL/SQL
 
-If a I<package> contains also an I<initialization block>, then it must have the
-package name after the C<END> or it must terminate with a semicolon and a slash
-(which is anyway the recommended practice).
+If a I<package> contains also an I<initialization block>, then it must terminate
+with a semicolon and a slash, or it must have the package name after the C<END>
+of package (which is the recommended practice anyway).
 
 For example, these two package (pseudo-)definitions will be correctly split:
 
     -- OK since it has the trailing slash
-    CREATE OR REPLACE PACKAGE BODY my_package_1 AS
+    CREATE OR REPLACE PACKAGE BODY my_package AS
         ...
     BEGIN
         ...
@@ -782,23 +785,23 @@ For example, these two package (pseudo-)definitions will be correctly split:
     /
     
     -- OK since it has the package name after the END
-    CREATE OR REPLACE PACKAGE BODY my_package_2 AS
+    CREATE OR REPLACE PACKAGE BODY my_package AS
         ...
     BEGIN
         ...
-    END my_package_2;
+    END my_package;
 
 while this one wouldn't, since it contains an initialization block and it lacks
 both the package name after the C<END> and the trailing slash:
 
     CREATE OR REPLACE PACKAGE BODY my_package AS
         ...
-    BEGIN
+    BEGIN -- initialization block starts here
         ...
     END;
 
 Note however that if the initialization block is absent, the package block will
-be correctly recognized even if it lacks both the package name after the C<END>
+be correctly isolated even if it lacks both the package name after the C<END>
 and the trailing slash.
 
 =back
@@ -887,7 +890,7 @@ this module a joke.
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2011 Emanuele Zeppieri.
+Copyright 2010-2011 Emanuele Zeppieri.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published

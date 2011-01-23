@@ -22,6 +22,7 @@ t/61-placeholders_empty.t
 t/70-proc_plsql_mixed.t
 t/71-proc_plsql_RTbug_57971.t
 t/72-proc_plsql_alias.t
+t/72-proc_plsql_function_inside_package.t
 t/72-proc_plsql_package.t
 t/73-proc_plpgsql_dollar_quoted.t
 t/74-proc_plpgsql_dollar_quoted_w_transactions.t

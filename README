@@ -2,7 +2,7 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    version 0.20000
+    version 0.30000
 
 SYNOPSIS
         # Multiple SQL statements in a single string
@@ -48,7 +48,7 @@ DESCRIPTION
     then this module is able to correctly handle the presence of said tokens
     inside identifiers, values, comments, "BEGIN ... END" blocks (even
     nested), *dollar-quoted* strings, MySQL custom "DELIMITER"s, procedural
-    code etc., as (partially) exemplified in the synopsis above.
+    code etc., as (partially) exemplified in the "SYNOPSIS" above.
 
     Consider however that this is by no means a validating parser
     (technically speaking, it's just a *context-sensitive tokenizer*). It
@@ -250,15 +250,15 @@ METHODS
     the fourth 3.
 
   "keep_terminators"
-    *   "$sql_splitter->keep_terminator"
+    *   "$sql_splitter->keep_terminators"
 
-    *   "$sql_splitter->keep_terminator( $boolean )"
+    *   "$sql_splitter->keep_terminators( $boolean )"
 
-        Getter/setter method for the "keep_terminator" option explained
+        Getter/setter method for the "keep_terminators" option explained
         above.
 
   "keep_terminator"
-    An alias for the =head2 "keep_terminators" method explained above.
+    An alias for the "keep_terminators" method explained above.
 
   "keep_extra_spaces"
     *   "$sql_splitter->keep_extra_spaces"
@@ -311,14 +311,15 @@ LIMITATIONS
     *   PL/SQL
 
         If a *package* contains also an *initialization block*, then it must
-        have the package name after the "END" or it must terminate with a
-        semicolon and a slash (which is anyway the recommended practice).
+        terminate with a semicolon and a slash, or it must have the package
+        name after the "END" of package (which is the recommended practice
+        anyway).
 
         For example, these two package (pseudo-)definitions will be
         correctly split:
 
             -- OK since it has the trailing slash
-            CREATE OR REPLACE PACKAGE BODY my_package_1 AS
+            CREATE OR REPLACE PACKAGE BODY my_package AS
                 ...
             BEGIN
                 ...
@@ -326,11 +327,11 @@ LIMITATIONS
             /
     
             -- OK since it has the package name after the END
-            CREATE OR REPLACE PACKAGE BODY my_package_2 AS
+            CREATE OR REPLACE PACKAGE BODY my_package AS
                 ...
             BEGIN
                 ...
-            END my_package_2;
+            END my_package;
 
         while this one wouldn't, since it contains an initialization block
         and it lacks both the package name after the "END" and the trailing
@@ -338,12 +339,12 @@ LIMITATIONS
 
             CREATE OR REPLACE PACKAGE BODY my_package AS
                 ...
-            BEGIN
+            BEGIN -- initialization block starts here
                 ...
             END;
 
         Note however that if the initialization block is absent, the package
-        block will be correctly recognized even if it lacks both the package
+        block will be correctly isolated even if it lacks both the package
         name after the "END" and the trailing slash.
 
   Non-limitations
@@ -411,7 +412,7 @@ SEE ALSO
     *   sql-split
 
 LICENSE AND COPYRIGHT
-    Copyright 2011 Emanuele Zeppieri.
+    Copyright 2010-2011 Emanuele Zeppieri.
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of either: the GNU General Public License as published
