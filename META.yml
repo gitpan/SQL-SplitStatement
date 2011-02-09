@@ -11,7 +11,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.31
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.200001, CPAN::Meta::Converter version 2.102400'
+generated_by: 'Dist::Zilla version 4.200003, CPAN::Meta::Converter version 2.110360'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -31,4 +31,4 @@ resources:
   bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=SQL-SplitStatement
   homepage: http://search.cpan.org/dist/SQL-SplitStatement
   repository: git://github.com/emazep/SQL-SplitStatement.git
-version: 0.30000
+version: 1.00000

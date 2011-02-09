@@ -4,7 +4,7 @@
       "Emanuele Zeppieri <emazep@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.200001, CPAN::Meta::Converter version 2.102400",
+   "generated_by" : "Dist::Zilla version 4.200003, CPAN::Meta::Converter version 2.110360",
    "license" : [
       "perl_5"
    ],
@@ -55,6 +55,6 @@
          "web" : "http://github.com/emazep/SQL-SplitStatement"
       }
    },
-   "version" : "0.30000"
+   "version" : "1.00000"
 }
 

@@ -2,22 +2,22 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    version 0.30000
+    version 1.00000
 
 SYNOPSIS
         # Multiple SQL statements in a single string
-    my $sql_code = <<'SQL';
+        my $sql_code = <<'SQL';
         CREATE TABLE parent(a, b, c   , d    );
         CREATE TABLE child (x, y, "w;", "z;z");
         /* C-style comment; */
         CREATE TRIGGER "check;delete;parent;" BEFORE DELETE ON parent WHEN
             EXISTS (SELECT 1 FROM child WHERE old.a = x AND old.b = y)
         BEGIN
-            SELECT RAISE(ABORT, 'constraint failed;'); -- Inlined SQL comment
+            SELECT RAISE(ABORT, 'constraint failed;'); -- Inline SQL comment
         END;
         -- Standalone SQL; comment; with semicolons;
         INSERT INTO parent (a, b, c, d) VALUES ('pippo;', 'pluto;', NULL, NULL);
-    SQL
+        SQL
     
         use SQL::SplitStatement;
     
@@ -53,10 +53,15 @@ DESCRIPTION
     Consider however that this is by no means a validating parser
     (technically speaking, it's just a *context-sensitive tokenizer*). It
     should rather be seen as an in-progress *heuristic* approach, which will
-    gradually improve as bugs will be reported. This also means that, with
-    the exception of the "LIMITATIONS" detailed below, there are no known
-    (to the author) SQL constructs the most current release of this module
-    can't handle.
+    gradually improve as test cases will be reported. This also means that,
+    except for the "LIMITATIONS" detailed below, there is no known (to the
+    author) SQL code the most current release of this module can't correctly
+    split.
+
+    The test suite bundled with the distribution (which now includes the
+    popular *Sakila* and *Pagila* sample db schemata, as detailed in the
+    "SHOWCASE" section below) should give you an idea of the capabilities of
+    this module
 
     If your atomic statements are to be fed to a DBMS, you are encouraged to
     use DBIx::MultiStatementDo instead, which uses this module and also
@@ -72,32 +77,43 @@ METHODS
     It creates and returns a new SQL::SplitStatement object. It accepts its
     options either as a hash or a hashref.
 
-    "new" takes the following Boolean options, which all default to false.
+    "new" takes the following Boolean options, which for documentation
+    purposes can be grouped in two sets: "Formatting Options" and "DBMSs
+    Specific Options".
 
+   Formatting Options
     *   "keep_terminators"
 
         A Boolean option which causes, when set to a false value (which is
-        the default), the trailing terminator tokens to be discarded in the
+        the default), the trailing terminator token to be discarded in the
         returned atomic statements. When set to a true value, the
         terminators are kept instead.
+
+        The possible terminators (which are treated as such depending on the
+        context) are:
+
+        *   ";" (the *semicolon* character);
+
+        *   any string defined by the MySQL "DELIMITER" command;
+
+        *   an ";" followed by an "/" (*forward-slash* character) on its own
+            line;
+
+        *   an ";" followed by an "." (*dot* character) on its own line,
+            followed by an "/" on its own line;
+
+        *   an "/" on its own line regardless of the preceding characters
+            (only if the "slash_terminates" option, explained below, is
+            set).
+
+        The multi-line terminators above are always treated as a single
+        token, that is they are discarded (or returned) as a whole
+        (regardless of the "slash_terminates" option value).
 
         If your statements are to be fed to a DBMS, you are advised to keep
         this option to its default (false) value, since some drivers/DBMSs
         don't want the terminator to be present at the end of the (single)
         statement.
-
-        The strings currently recognized as terminators (depending on the
-        *context*) are:
-
-        *   ";" (the *semicolon* character).
-
-        *   "/" (the *forward-slash* character).
-
-        *   A semicolon followed by a forward-slash on its own line. This
-            latter string is treated as a single token (it is used to
-            terminate PL/SQL procedures).
-
-        *   Any string defined by the MySQL "DELIMITER" command.
 
         (Note that the last, possibly empty, statement of a given SQL text,
         never has a trailing terminator. See below for an example.)
@@ -186,8 +202,34 @@ METHODS
     
         $sql_string eq join '', @verbatim_statements; # Always true, given the constructor above.
 
-    Other than this, again, you are highly recommended to stick with the
-    defaults.
+    Other than this, again, you are recommended to stick with the defaults.
+
+   DBMSs Specific Options
+    The same syntactic structure can have different semantics across
+    different SQL dialects, so sometimes it is necessary to help the parser
+    to make the right decision. This is the function of these options.
+
+    *   "slash_terminates"
+
+        A Boolean option which causes, when set to a true value (which is
+        the default), a "/" (*forward-slash*) on its own line, even without
+        a preceding semicolon, to be admitted as a (possible) terminator.
+
+        If set to false, a forward-slash on its own line is treated as a
+        statement terminator only if preceded by a semicolon or by a dot and
+        a semicolon.
+
+        If you are dealing with Oracle's SQL, you should let this option
+        set, since a slash (alone, without a preceding semicolon) is often
+        used as a terminator, as it is permitted by SQL*Plus (on non-*block*
+        statements).
+
+        With SQL dialects other than Oracle, there is the (theoretical)
+        possibility that a slash on its own line can pass the additional
+        checks and be considered a terminator (while it shouldn't). This
+        chance should be really tiny (it has never been observed in real
+        world code indeed). Though negligible, by setting this option to
+        false that risk can anyway be ruled out.
 
   "split"
     *   "$sql_splitter->split( $sql_string )"
@@ -210,7 +252,7 @@ METHODS
     
         my @statements = $sql_splitter->split( 'SELECT 1;' );
     
-        print 'The SQL code contains ' . scalar(@statements) . ' statements.';
+        print 'The SQL code contains ' . Scalar(@statements) . ' statements.';
         # The SQL code contains 2 statements.
 
   "split_with_placeholders"
@@ -225,18 +267,15 @@ METHODS
     returned by the "split" method, while the second is a reference to the
     list of the number of placeholders as explained above.
 
-    Currently the only recognized placeholders are the "?" (question mark)
-    characters.
-
     Here is an example:
 
         # 4 statements (valid SQLite SQL)
-    my $sql_code = <<'SQL';
+        my $sql_code = <<'SQL';
         CREATE TABLE state (id, name);
         INSERT INTO  state (id, name) VALUES (?, ?);
         CREATE TABLE city  (id, name, state_id);
         INSERT INTO  city  (id, name, state_id) VALUES (?, ?, ?)
-    SQL
+        SQL
     
         my $splitter = SQL::SplitStatement->new;
     
@@ -248,6 +287,15 @@ METHODS
     where the returned $placeholders list(ref) is to be read as follows: the
     first statement contains 0 placeholders, the second 2, the third 0 and
     the fourth 3.
+
+    The recognized placeholders are:
+
+    *   *question mark* placeholders, represented by the "?" character;
+
+    *   *dollar sign numbered* placeholders, represented by the "$1, $2,
+        ..., $n" strings;
+
+    *   *named parameters*, such as ":foo", ":bar", ":baz" etc.
 
   "keep_terminators"
     *   "$sql_splitter->keep_terminators"
@@ -283,81 +331,67 @@ METHODS
         Getter/setter method for the "keep_empty_statements" option
         explained above.
 
+  "slash_terminates"
+    *   "$sql_splitter->slash_terminates"
+
+    *   "$sql_splitter->slash_terminates( $boolean )"
+
+        Getter/setter method for the "slash_terminates" option explained
+        above.
+
 SUPPORTED DBMSs
     SQL::SplitStatement aims to cover the widest possible range of DBMSs,
-    SQL dialects and extensions (even proprietary), in a fully transparent
-    way for the user.
+    SQL dialects and extensions (even proprietary), in a (nearly) fully
+    transparent way for the user.
 
     Currently it has been tested mainly on SQLite, PostgreSQL, MySQL and
     Oracle.
 
+  Procedural Extensions
+    Procedural code is by far the most complex to handle.
+
+    Currently any block of code which start with "DECLARE", "CREATE" or
+    "CALL" is correctly recognized, as well as *anonymous* "BEGIN ... END"
+    blocks, *dollar quoted* blocks and blocks delimited by a
+    "DELIMITER"-defined *custom terminator*, therefore a wide range of
+    procedural extensions should be handled correctly. However, only PL/SQL,
+    PL/PgSQL and MySQL code has been tested so far.
+
+    If you need also other procedural languages to be recognized, please let
+    me know (possibly with some test cases).
+
 LIMITATIONS
-    To be split correctly, the given SQL code is subject to the following
-    limitations, mainly concerning procedural code (the limitation about the
-    use of some keywords as unquoted identifiers affecting the previous
-    releases, has now been eliminated).
+    Bound to be plenty, given the heuristic nature of this module (and its
+    ambitious goals). However, no limitations are currently known.
 
-    *   Procedural extensions
-
-        Currently any block of code which start with "DECLARE", "CREATE" or
-        "CALL" is correctly recognized, as well as *bare* "BEGIN ... END"
-        blocks and *dollar quoted* blocks, therefore a wide range of
-        procedural extensions should be handled correctly. However, only
-        PL/SQL, PL/PgSQL and MySQL code has been tested so far.
-
-        If you need also other procedural languages to be recognized, please
-        let me know (possibly with some test cases).
-
-    *   PL/SQL
-
-        If a *package* contains also an *initialization block*, then it must
-        terminate with a semicolon and a slash, or it must have the package
-        name after the "END" of package (which is the recommended practice
-        anyway).
-
-        For example, these two package (pseudo-)definitions will be
-        correctly split:
-
-            -- OK since it has the trailing slash
-            CREATE OR REPLACE PACKAGE BODY my_package AS
-                ...
-            BEGIN
-                ...
-            END;
-            /
-    
-            -- OK since it has the package name after the END
-            CREATE OR REPLACE PACKAGE BODY my_package AS
-                ...
-            BEGIN
-                ...
-            END my_package;
-
-        while this one wouldn't, since it contains an initialization block
-        and it lacks both the package name after the "END" and the trailing
-        slash:
-
-            CREATE OR REPLACE PACKAGE BODY my_package AS
-                ...
-            BEGIN -- initialization block starts here
-                ...
-            END;
-
-        Note however that if the initialization block is absent, the package
-        block will be correctly isolated even if it lacks both the package
-        name after the "END" and the trailing slash.
+    Please report any problematic test case.
 
   Non-limitations
     To be split correctly, the given input must, in general, be
     syntactically valid SQL. For example, an unbalanced "BEGIN" or a
     misspelled keyword could, under certain circumstances, confuse the
     parser and make it trip over the next statement terminator, thus
-    returning wrongly split statements. This should not be a problem though,
-    as the original (invalid) SQL code would have been unusable anyway
+    returning non-split statements. This should not be a problem though, as
+    the original (invalid) SQL code would have been unusable anyway
     (remember that this is NOT a validating parser!)
+
+SHOWCASE
+    To test the capabilities of this module, you can run it (or rather run
+    sql-split) on the files "t/data/sakila-schema.sql" and
+    "t/data/pagila-schema.sql" included in the distribution, which contain
+    two quite large and complex *real world* sample db schemata, for MySQL
+    and PostgreSQL respectively.
+
+    For more information:
+
+    *   Sakila db: <http://dev.mysql.com/doc/sakila/en/sakila.html>
+
+    *   Pagila db: <http://pgfoundry.org/projects/dbsamples>
 
 DEPENDENCIES
     SQL::SplitStatement depends on the following modules:
+
+    *   Carp
 
     *   Class::Accessor::Fast
 
@@ -365,7 +399,7 @@ DEPENDENCIES
 
     *   Regexp::Common
 
-    *   SQL::Tokenizer
+    *   SQL::Tokenizer 0.20 or newer
 
 AUTHOR
     Emanuele Zeppieri, "<emazep@cpan.org>"
@@ -380,7 +414,7 @@ BUGS
     on your bug as I make changes.
 
 SUPPORT
-    You can find documentation for this module with the perldoc command.
+    You can find documentation for this module with the perldoc command:
 
         perldoc SQL::SplitStatement
 
