@@ -2,7 +2,7 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    version 1.00000
+    version 1.00009
 
 SYNOPSIS
         # Multiple SQL statements in a single string
@@ -121,8 +121,8 @@ METHODS
     *   "keep_terminator"
 
         An alias for the the "keep_terminators" option explained above. Note
-        that if "keep_terminators" and "keep_terminator" are both set at
-        object construction time, "new" throws an exception.
+        that if "keep_terminators" and "keep_terminator" are both passed to
+        "new", an exception is thrown.
 
     *   "keep_extra_spaces"
 

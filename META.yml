@@ -31,4 +31,4 @@ resources:
   bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=SQL-SplitStatement
   homepage: http://search.cpan.org/dist/SQL-SplitStatement
   repository: git://github.com/emazep/SQL-SplitStatement.git
-version: 1.00000
+version: 1.00009

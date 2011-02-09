@@ -10,6 +10,7 @@ bin/sql-split
 lib/SQL/SplitStatement.pm
 t/00-compile.t
 t/00-load.t
+t/05-empty_statements.t
 t/10-simple.t
 t/20-hard.t
 t/25-keywords_as_unquoted_identifiers.t

@@ -37,7 +37,7 @@ my %WriteMakefileArgs = (
     'SQL::Tokenizer' => '0.20',
     'constant' => '0'
   },
-  'VERSION' => '1.00000',
+  'VERSION' => '1.00009',
   'test' => {
     'TESTS' => 't/*.t'
   }
