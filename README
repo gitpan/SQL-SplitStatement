@@ -2,40 +2,34 @@ NAME
     SQL::SplitStatement - Split any SQL code into atomic statements
 
 VERSION
-    version 1.00009
+    version 1.00020
 
 SYNOPSIS
         # Multiple SQL statements in a single string
-        my $sql_code = <<'SQL';
-        CREATE TABLE parent(a, b, c   , d    );
-        CREATE TABLE child (x, y, "w;", "z;z");
-        /* C-style comment; */
-        CREATE TRIGGER "check;delete;parent;" BEFORE DELETE ON parent WHEN
-            EXISTS (SELECT 1 FROM child WHERE old.a = x AND old.b = y)
-        BEGIN
-            SELECT RAISE(ABORT, 'constraint failed;'); -- Inline SQL comment
-        END;
-        -- Standalone SQL; comment; with semicolons;
-        INSERT INTO parent (a, b, c, d) VALUES ('pippo;', 'pluto;', NULL, NULL);
-        SQL
-    
-        use SQL::SplitStatement;
-    
-        my $sql_splitter = SQL::SplitStatement->new;
-        my @statements = $sql_splitter->split($sql_code);
-    
-        # @statements now is:
-        #
-        # (
-        #     'CREATE TABLE parent(a, b, c   , d    )',
-        #     'CREATE TABLE child (x, y, "w;", "z;z")',
-        #     'CREATE TRIGGER "check;delete;parent;" BEFORE DELETE ON parent WHEN
-        #     EXISTS (SELECT 1 FROM child WHERE old.a = x AND old.b = y)
-        # BEGIN
-        #     SELECT RAISE(ABORT, \'constraint failed;\');
-        # END',
-        #     'INSERT INTO parent (a, b, c, d) VALUES (\'pippo;\', \'pluto;\', NULL, NULL)'
-        # )
+    my $sql_code = <<'SQL';
+    CREATE TABLE parent(a, b, c   , d    );
+    CREATE TABLE child (x, y, "w;", "z;z");
+    /* C-style comment; */
+    CREATE TRIGGER "check;delete;parent;" BEFORE DELETE ON parent WHEN
+        EXISTS (SELECT 1 FROM child WHERE old.a = x AND old.b = y)
+    BEGIN
+        SELECT RAISE(ABORT, 'constraint failed;'); -- Inline SQL comment
+    END;
+    -- Standalone SQL; comment; with semicolons;
+    INSERT INTO parent (a, b, c, d) VALUES ('pippo;', 'pluto;', NULL, NULL);
+    SQL
+
+    use SQL::SplitStatement;
+
+    my $sql_splitter = SQL::SplitStatement->new; my @statements =
+    $sql_splitter->split($sql_code);
+
+    # @statements now is: # # ( # 'CREATE TABLE parent(a, b, c , d )', #
+    'CREATE TABLE child (x, y, "w;", "z;z")', # 'CREATE TRIGGER
+    "check;delete;parent;" BEFORE DELETE ON parent WHEN # EXISTS (SELECT 1
+    FROM child WHERE old.a = x AND old.b = y) # BEGIN # SELECT RAISE(ABORT,
+    \'constraint failed;\'); # END', # 'INSERT INTO parent (a, b, c, d)
+    VALUES (\'pippo;\', \'pluto;\', NULL, NULL)' # )
 
 DESCRIPTION
     This is a simple module which tries to split any SQL code, even
@@ -220,9 +214,9 @@ METHODS
         a semicolon.
 
         If you are dealing with Oracle's SQL, you should let this option
-        set, since a slash (alone, without a preceding semicolon) is often
-        used as a terminator, as it is permitted by SQL*Plus (on non-*block*
-        statements).
+        set, since a slash (alone, without a preceding semicolon) is
+        sometimes used as a terminator, as it is permitted by SQL*Plus (on
+        non-*block* statements).
 
         With SQL dialects other than Oracle, there is the (theoretical)
         possibility that a slash on its own line can pass the additional
@@ -252,7 +246,7 @@ METHODS
     
         my @statements = $sql_splitter->split( 'SELECT 1;' );
     
-        print 'The SQL code contains ' . Scalar(@statements) . ' statements.';
+        print 'The SQL code contains ' . scalar(@statements) . ' statements.';
         # The SQL code contains 2 statements.
 
   "split_with_placeholders"
@@ -260,7 +254,7 @@ METHODS
 
     It works exactly as the "split" method explained above, except that it
     returns also a list of integers, each of which is the number of the
-    *unnamed placeholders* contained in the corresponding atomic statement.
+    *placeholders* contained in the corresponding atomic statement.
 
     More precisely, its return value is a list of two elements, the first of
     which is a reference to the list of the atomic statements exactly as
@@ -270,19 +264,19 @@ METHODS
     Here is an example:
 
         # 4 statements (valid SQLite SQL)
-        my $sql_code = <<'SQL';
-        CREATE TABLE state (id, name);
-        INSERT INTO  state (id, name) VALUES (?, ?);
-        CREATE TABLE city  (id, name, state_id);
-        INSERT INTO  city  (id, name, state_id) VALUES (?, ?, ?)
-        SQL
-    
-        my $splitter = SQL::SplitStatement->new;
-    
-        my ( $statements, $placeholders )
-            = $splitter->split_with_placeholders( $sql_code );
-    
-        # $placeholders now is: [0, 2, 0, 3]
+    my $sql_code = <<'SQL';
+    CREATE TABLE state (id, name);
+    INSERT INTO  state (id, name) VALUES (?, ?);
+    CREATE TABLE city  (id, name, state_id);
+    INSERT INTO  city  (id, name, state_id) VALUES (?, ?, ?)
+    SQL
+
+    my $splitter = SQL::SplitStatement->new;
+
+    my ( $statements, $placeholders ) = $splitter->split_with_placeholders(
+    $sql_code );
+
+    # $placeholders now is: [0, 2, 0, 3]
 
     where the returned $placeholders list(ref) is to be read as follows: the
     first statement contains 0 placeholders, the second 2, the third 0 and
@@ -350,12 +344,12 @@ SUPPORTED DBMSs
   Procedural Extensions
     Procedural code is by far the most complex to handle.
 
-    Currently any block of code which start with "DECLARE", "CREATE" or
-    "CALL" is correctly recognized, as well as *anonymous* "BEGIN ... END"
-    blocks, *dollar quoted* blocks and blocks delimited by a
-    "DELIMITER"-defined *custom terminator*, therefore a wide range of
-    procedural extensions should be handled correctly. However, only PL/SQL,
-    PL/PgSQL and MySQL code has been tested so far.
+    Currently any block of code which start with "FUNCTION", "PROCEDURE",
+    "DECLARE", "CREATE" or "CALL" is correctly recognized, as well as
+    *anonymous* "BEGIN ... END" blocks, *dollar quoted* blocks and blocks
+    delimited by a "DELIMITER"-defined *custom terminator*, therefore a wide
+    range of procedural extensions should be handled correctly. However,
+    only PL/SQL, PL/PgSQL and MySQL code has been tested so far.
 
     If you need also other procedural languages to be recognized, please let
     me know (possibly with some test cases).
@@ -371,16 +365,16 @@ LIMITATIONS
     syntactically valid SQL. For example, an unbalanced "BEGIN" or a
     misspelled keyword could, under certain circumstances, confuse the
     parser and make it trip over the next statement terminator, thus
-    returning non-split statements. This should not be a problem though, as
-    the original (invalid) SQL code would have been unusable anyway
-    (remember that this is NOT a validating parser!)
+    returning non-split statements. This should not be seen as a limitation
+    though, as the original (invalid) SQL code would have been unusable
+    anyway (remember that this is NOT a validating parser!)
 
 SHOWCASE
     To test the capabilities of this module, you can run it (or rather run
-    sql-split) on the files "t/data/sakila-schema.sql" and
-    "t/data/pagila-schema.sql" included in the distribution, which contain
-    two quite large and complex *real world* sample db schemata, for MySQL
-    and PostgreSQL respectively.
+    sql-split) on the files t/data/sakila-schema.sql and
+    t/data/pagila-schema.sql included in the distribution, which contain two
+    quite large and complex *real world* db schemata, for MySQL and
+    PostgreSQL respectively.
 
     For more information:
 
@@ -399,7 +393,7 @@ DEPENDENCIES
 
     *   Regexp::Common
 
-    *   SQL::Tokenizer 0.20 or newer
+    *   SQL::Tokenizer 0.22 or newer
 
 AUTHOR
     Emanuele Zeppieri, "<emazep@cpan.org>"

@@ -34,10 +34,10 @@ my %WriteMakefileArgs = (
     'List::MoreUtils' => '0',
     'Pod::Usage' => '0',
     'Regexp::Common' => '0',
-    'SQL::Tokenizer' => '0.20',
+    'SQL::Tokenizer' => '0.22',
     'constant' => '0'
   },
-  'VERSION' => '1.00009',
+  'VERSION' => '1.00020',
   'test' => {
     'TESTS' => 't/*.t'
   }
